@@ -1,6 +1,6 @@
 # 💬 Angel Chat
 
-Una aplicación web de chat impulsada por la API de Gemini de Google, construida con Flask. Angel es un asistente conversacional que responde preguntas de forma inteligente en una interfaz similar a ChatGPT.
+Una aplicación web de chat impulsada por la API de Gemini de Google, construida con Flask.
 
 ## 🚀 Características
 
