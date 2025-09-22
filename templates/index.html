@@ -2,23 +2,108 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>Angel – Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Inteligente de Angel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'></svg>">
+    <!-- Google Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>💬 Angel</h1>
-    </header>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar" style="display: none;">
+        <div class="sidebar-header">
+            <button class="sidebar-toggle" id="sidebar-toggle">
+                <span class="material-icons">menu</span>
+            </button>
+            <div class="new-chat-btn" id="new-chat">
+                <span class="material-icons">add</span>
+                <span>Nueva conversación</span>
+            </div>
+        </div>
 
-    <main class="chat-wrapper">
-        <div id="chat-box" class="chat-box"></div>
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <!-- Header -->
+        <div class="main-header">
+            <div class="header-left">
+                <div class="gemini-title">
+                    <span class="gemini-icon"></span>
+                    <span>Chat Inteligente de Angel</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn">
+                    <span class="material-icons">apps</span>
+                </button>
+                <button class="header-btn">
+                    <span class="material-icons">account_circle</span>
+                </button>
+            </div>
+        </div>
 
-        <form id="chat-form" class="input-area" autocomplete="off">
-            <textarea id="mensaje" rows="1" placeholder="Escribe tu mensaje…"></textarea>
-            <button id="enviar" type="submit">Enviar</button>
-        </form>
-    </main>
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <!-- Welcome Screen -->
+            <div class="welcome-screen" id="welcome-screen">
+                <div class="welcome-content">
+                    <h1>Hola, Usuario</h1>
+                    <p>¿En qué puedo ayudarte hoy?</p>
+                    <div class="suggestion-cards">
+                        <div class="suggestion-card">
+                            <span class="material-icons">lightbulb</span>
+                            <span>Pregunta cualquier cosa</span>
+                        </div>
+                        <div class="suggestion-card">
+                            <span class="material-icons">code</span>
+                            <span>Ayuda con programación</span>
+                        </div>
+                        <div class="suggestion-card">
+                            <span class="material-icons">create</span>
+                            <span>Crear contenido</span>
+                        </div>
+                        <div class="suggestion-card">
+                            <span class="material-icons">analytics</span>
+                            <span>Análisis de datos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chat-messages" style="display: none;">
+                <!-- Messages will be added here -->
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <div class="input-area">
+                    <button class="attach-btn">
+                        <span class="material-icons">attach_file</span>
+                    </button>
+                    <textarea 
+                        id="message-input" 
+                        placeholder="Pregúntale a Gemini"
+                        rows="1"
+                    ></textarea>
+                    <button class="voice-btn">
+                        <span class="material-icons">mic</span>
+                    </button>
+                    <button class="send-btn" id="send-btn" disabled>
+                        <span class="material-icons">send</span>
+                    </button>
+                </div>
+            </div>
+            <div class="input-footer">
+                <span>Es posible que Angel muestre información inexacta, incluida información sobre personas, por lo que debes verificar sus respuestas. <a href="#">Tu privacidad y las aplicaciones de Gemini</a></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
     <script src="{{ url_for('static', filename='chat.js') }}"></script>
 </body>
 </html>
