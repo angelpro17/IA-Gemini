@@ -1,10 +1,9 @@
 // Variables globales
 let currentChatId = null;
-let chatHistory = [];
 let isTyping = false;
 
 // Elementos del DOM
-let chatContainer, messagesContainer, messageInput, sendButton, welcomeScreen, sidebar, mobileMenuBtn, newChatBtn, chatHistoryContainer;
+let chatContainer, messagesContainer, messageInput, sendButton, welcomeScreen;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
@@ -19,10 +18,6 @@ function initializeElements() {
     messageInput = document.getElementById('message-input');
     sendButton = document.getElementById('send-btn');
     welcomeScreen = document.getElementById('welcome-screen');
-    sidebar = document.querySelector('.sidebar');
-    mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    newChatBtn = document.getElementById('newChatBtn');
-    chatHistoryContainer = document.querySelector('.chat-history');
 }
 
 function initializeEventListeners() {
@@ -49,26 +44,9 @@ function initializeEventListeners() {
             
             // Auto-resize del textarea
             this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            this.style.height = this.scrollHeight + 'px';
         });
     }
-    
-    // Nuevo chat
-    if (newChatBtn) {
-        newChatBtn.addEventListener('click', createNewChat);
-    }
-    
-    // Menú móvil
-    if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener('click', toggleSidebar);
-    }
-    
-    // Cerrar sidebar en móvil al hacer click fuera
-    document.addEventListener('click', function(e) {
-        if (window.innerWidth <= 768 && sidebar && !sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-            sidebar.classList.remove('active');
-        }
-    });
     
     // Sugerencias de la pantalla de bienvenida
     document.querySelectorAll('.suggestion-card').forEach(card => {
@@ -95,67 +73,10 @@ function createNewChat() {
         welcomeScreen.style.display = 'flex';
     }
     
-    // Agregar al historial
-    addChatToHistory(currentChatId, 'Nuevo chat');
-    
     // Limpiar input
     if (messageInput) {
         messageInput.value = '';
         messageInput.style.height = 'auto';
-    }
-}
-
-function addChatToHistory(chatId, title) {
-    if (!chatHistoryContainer) return;
-    
-    // Crear elemento de historial
-    const historyItem = document.createElement('div');
-    historyItem.className = 'history-item';
-    historyItem.dataset.chatId = chatId;
-    
-    historyItem.innerHTML = `
-        <span class="material-icons">chat_bubble_outline</span>
-        <span class="history-text">${title}</span>
-        <button class="history-menu">
-            <span class="material-icons">more_vert</span>
-        </button>
-    `;
-    
-    // Evento para cambiar de chat
-    historyItem.addEventListener('click', function(e) {
-        if (!e.target.closest('.history-menu')) {
-            switchToChat(chatId);
-        }
-    });
-    
-    // Agregar al inicio del historial
-    chatHistoryContainer.insertBefore(historyItem, chatHistoryContainer.firstChild);
-    
-    // Marcar como activo
-    document.querySelectorAll('.history-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    historyItem.classList.add('active');
-}
-
-function switchToChat(chatId) {
-    currentChatId = chatId;
-    
-    // Marcar como activo en el historial
-    document.querySelectorAll('.history-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.dataset.chatId === chatId) {
-            item.classList.add('active');
-        }
-    });
-    
-    // Aquí podrías cargar los mensajes del chat si los tuvieras guardados
-    // Por ahora solo limpiamos y mostramos la pantalla de bienvenida
-    if (messagesContainer) {
-        messagesContainer.innerHTML = '';
-    }
-    if (welcomeScreen) {
-        welcomeScreen.style.display = 'flex';
     }
 }
 
@@ -178,9 +99,6 @@ async function sendMessage() {
     messageInput.value = '';
     messageInput.style.height = 'auto';
     
-    // Actualizar título del chat en el historial
-    updateChatTitle(currentChatId, message);
-    
     // Mostrar indicador de escritura
     showTypingIndicator();
     
@@ -193,61 +111,105 @@ async function sendMessage() {
             body: JSON.stringify({ message: message })
         });
         
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-        }
-        
         const data = await response.json();
         
         // Ocultar indicador de escritura
         hideTypingIndicator();
         
-        // Agregar respuesta del bot
-        addMessage(data.response, 'bot');
+        // Verificar si hay una respuesta exitosa o de fallback
+        if (data.response) {
+            // Si es una respuesta de fallback, mostrar indicador visual
+            if (data.is_fallback) {
+                addMessage(data.response, 'bot', true);
+            } else {
+                addMessage(data.response, 'bot');
+            }
+        } else if (data.error) {
+            // Manejar diferentes tipos de errores
+            handleErrorResponse(data);
+        } else {
+            throw new Error('Respuesta inesperada del servidor');
+        }
         
     } catch (error) {
         console.error('Error:', error);
         hideTypingIndicator();
-        addMessage('Lo siento, ocurrió un error. Por favor, intenta de nuevo.', 'bot');
+        
+        // Error de conexión o del servidor
+        addMessage('❌ **Error de Conexión**\n\nNo se pudo conectar con el servidor. Por favor:\n- Verifica tu conexión a internet\n- Intenta recargar la página\n- Contacta al administrador si el problema persiste', 'bot', false, true);
     }
 }
 
-function addMessage(content, sender) {
+function handleErrorResponse(data) {
+    let errorMessage = '';
+    
+    switch (data.error_type) {
+        case 'quota_exceeded':
+            errorMessage = '⏰ **Servicio Temporalmente Limitado**\n\nHe alcanzado mi cuota diaria de consultas. El servicio se restablecerá automáticamente en unas horas.\n\n💡 **Sugerencia**: Guarda tu pregunta e intenta más tarde.';
+            break;
+        case 'api_error':
+            errorMessage = '⚙️ **Error de Configuración**\n\nHay un problema con la configuración del servicio.\n\n📞 **Acción requerida**: Contacta al administrador del sistema.';
+            break;
+        case 'general_error':
+        default:
+            errorMessage = '❌ **Error Temporal**\n\nOcurrió un error inesperado.\n\n🔄 **Solución**: Intenta de nuevo en unos momentos.';
+            break;
+    }
+    
+    addMessage(errorMessage, 'bot', false, true);
+}
+
+function addMessage(content, sender, isFallback = false, isError = false) {
     if (!messagesContainer) return;
     
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message`;
     
+    // Agregar clases especiales para fallback y errores
+    if (isFallback) {
+        messageDiv.classList.add('fallback-message');
+    }
+    if (isError) {
+        messageDiv.classList.add('error-message');
+    }
+    
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
-    avatar.textContent = sender === 'user' ? '👤' : '🤖';
+    
+    // Cambiar avatar según el tipo de mensaje
+    if (sender === 'user') {
+        avatar.textContent = '👤';
+    } else if (isFallback) {
+        avatar.textContent = '⚠️';
+    } else if (isError) {
+        avatar.textContent = '❌';
+    } else {
+        avatar.textContent = '🤖';
+    }
     
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
     
-    if (sender === 'bot' && typeof marked !== 'undefined') {
-        // Renderizar Markdown para respuestas del bot
-        messageContent.innerHTML = marked.parse(content);
+    // Procesar contenido según el tipo de mensaje
+    if (sender === 'bot' && !isError) {
+        // Para mensajes del bot, usar marked para procesar Markdown
+        if (typeof marked !== 'undefined') {
+            messageContent.innerHTML = marked.parse(content);
+        } else {
+            // Fallback si marked no está disponible
+            messageContent.innerHTML = content.replace(/\n/g, '<br>');
+        }
     } else {
+        // Para mensajes del usuario y errores, mostrar como texto plano
         messageContent.textContent = content;
     }
     
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(messageContent);
-    
     messagesContainer.appendChild(messageDiv);
     
-    // Scroll al final
+    // Scroll automático
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    
-    // Animación de entrada
-    messageDiv.style.opacity = '0';
-    messageDiv.style.transform = 'translateY(20px)';
-    requestAnimationFrame(() => {
-        messageDiv.style.transition = 'all 0.3s ease';
-        messageDiv.style.opacity = '1';
-        messageDiv.style.transform = 'translateY(0)';
-    });
 }
 
 function showTypingIndicator() {
@@ -281,28 +243,3 @@ function hideTypingIndicator() {
         typingIndicator.remove();
     }
 }
-
-function updateChatTitle(chatId, firstMessage) {
-    const historyItem = document.querySelector(`[data-chat-id="${chatId}"]`);
-    if (historyItem) {
-        const titleElement = historyItem.querySelector('.history-text');
-        if (titleElement && titleElement.textContent === 'Nuevo chat') {
-            // Usar las primeras palabras del mensaje como título
-            const title = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
-            titleElement.textContent = title;
-        }
-    }
-}
-
-function toggleSidebar() {
-    if (sidebar) {
-        sidebar.classList.toggle('active');
-    }
-}
-
-// Responsive
-window.addEventListener('resize', function() {
-    if (window.innerWidth > 768 && sidebar) {
-        sidebar.classList.remove('active');
-    }
-});

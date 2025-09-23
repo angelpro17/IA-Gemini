@@ -100,8 +100,96 @@ def chat():
         return jsonify({'response': respuesta})
     
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
+        error_message = str(e)
+        print(f"Error: {error_message}")
+        
+        # Detectar error de cuota excedida - proporcionar respuesta de fallback
+        if "429" in error_message or "quota" in error_message.lower() or "exceeded" in error_message.lower():
+            fallback_response = get_fallback_response(message)
+            return jsonify({
+                'response': fallback_response,
+                'is_fallback': True,
+                'error_type': 'quota_exceeded'
+            })
+        
+        # Otros errores de API
+        elif "400" in error_message or "401" in error_message or "403" in error_message:
+            return jsonify({
+                'error': 'Hay un problema con la configuración del servicio. Por favor, contacta al administrador.',
+                'error_type': 'api_error'
+            }), 500
+        
+        # Error genérico
+        return jsonify({
+            'error': 'Lo siento, ocurrió un error. Por favor, intenta de nuevo.',
+            'error_type': 'general_error'
+        }), 500
+
+def get_fallback_response(message):
+    """Proporciona respuestas de fallback cuando la API no está disponible"""
+    message_lower = message.lower()
+    
+    # Respuestas para saludos
+    if any(word in message_lower for word in ['hola', 'buenos', 'buenas', 'saludos', 'hey']):
+        return """## ¡Hola! 👋
+
+Soy el **Asistente Personal de Angel**, aunque actualmente tengo limitaciones temporales en mi servicio.
+
+### Estado del Servicio
+- 🔄 **Modo Limitado**: He alcanzado mi cuota diaria de consultas
+- ⏰ **Disponibilidad**: El servicio se restablecerá en unas horas
+- 💡 **Sugerencia**: Intenta de nuevo más tarde para una experiencia completa
+
+¡Gracias por tu paciencia!"""
+    
+    # Respuestas para preguntas sobre programación
+    elif any(word in message_lower for word in ['código', 'programar', 'javascript', 'python', 'html', 'css']):
+        return """## 💻 Consulta de Programación
+
+Actualmente estoy en **modo limitado** debido a restricciones de cuota.
+
+### Recursos Recomendados
+- 📚 **MDN Web Docs**: Para HTML, CSS y JavaScript
+- 🐍 **Python.org**: Documentación oficial de Python
+- 📖 **Stack Overflow**: Comunidad de desarrolladores
+- 🎓 **FreeCodeCamp**: Tutoriales gratuitos
+
+### ¿Necesitas ayuda urgente?
+Intenta reformular tu pregunta más tarde cuando el servicio esté completamente disponible."""
+    
+    # Respuestas para información general
+    elif any(word in message_lower for word in ['info', 'información', 'ayuda', 'qué', 'cómo', 'cuál']):
+        return """## ℹ️ Información del Servicio
+
+**Angel AI Assistant** está temporalmente en modo limitado.
+
+### Estado Actual
+- ⚠️ **Cuota Excedida**: He alcanzado el límite diario de consultas
+- 🔄 **Reinicio**: El servicio se restablecerá automáticamente
+- ⏱️ **Tiempo Estimado**: Unas horas
+
+### Mientras Tanto
+- Puedes guardar tus preguntas para más tarde
+- El servicio completo estará disponible pronto
+- Gracias por tu comprensión"""
+    
+    # Respuesta genérica
+    else:
+        return """## 🤖 Angel AI Assistant - Modo Limitado
+
+Lo siento, actualmente estoy operando con **capacidad limitada** debido a restricciones de cuota diaria.
+
+### ¿Qué Significa Esto?
+- 📊 **Cuota Diaria**: He procesado el máximo de consultas permitidas hoy
+- ⏰ **Renovación**: El servicio se restablecerá automáticamente
+- 🔄 **Disponibilidad**: Intenta de nuevo en unas horas
+
+### Tu Consulta
+He recibido tu mensaje: *"{}"*
+
+**Recomendación**: Guarda tu pregunta y vuelve a intentarlo más tarde para obtener una respuesta completa y personalizada.
+
+¡Gracias por tu paciencia! 🙏""".format(message[:100] + "..." if len(message) > 100 else message)
 
 @app.route("/health")
 def health():
